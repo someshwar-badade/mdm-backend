@@ -33,7 +33,7 @@ class PoliciesServiceProvider extends ServiceProvider
 
         if (file_exists($routeFile)) {
             Route::middleware('api')
-                ->prefix('api/v1/' . strtolower('Policies'))
+                ->prefix('api/v1')
                 ->group($routeFile);
         }
     }

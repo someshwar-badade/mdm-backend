@@ -33,7 +33,7 @@ class AuditServiceProvider extends ServiceProvider
 
         if (file_exists($routeFile)) {
             Route::middleware('api')
-                ->prefix('api/v1/' . strtolower('Audit'))
+                ->prefix('api/v1')
                 ->group($routeFile);
         }
     }
