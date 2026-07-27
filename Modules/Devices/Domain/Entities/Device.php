@@ -58,4 +58,12 @@ class Device extends Model
     {
         return $this->hasMany(DeviceEvent::class, 'device_id');
     }
+
+    /**
+     * Get the command queue for this device.
+     */
+    public function commands()
+    {
+        return $this->hasMany(\Modules\Commands\Domain\Entities\Command::class, 'device_id');
+    }
 }
