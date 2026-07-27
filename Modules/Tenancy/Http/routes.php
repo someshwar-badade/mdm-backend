@@ -6,7 +6,7 @@ use Modules\Tenancy\Application\Services\TenantContext;
 
 Route::get('/health', [TenancyController::class, 'health']);
 
-Route::middleware(['tenant.resolve'])->get('/tenant-only', function () {
+Route::middleware(['auth.jwt', 'tenant.resolve'])->get('/tenant-only', function () {
     return response()->json([
         'organization_id' => TenantContext::get()
     ]);

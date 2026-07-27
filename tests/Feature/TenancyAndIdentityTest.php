@@ -8,16 +8,19 @@ use Modules\Organizations\Domain\Entities\Organization;
 use Modules\Identity\Domain\Entities\User;
 use Modules\Identity\Domain\Entities\Role;
 use Modules\Tenancy\Application\Services\TenantContext;
+use Modules\Identity\Application\Services\JwtService;
 
 class TenancyAndIdentityTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected JwtService $jwtService;
+
     protected function setUp(): void
     {
         parent::setUp();
-        // Clear TenantContext before each test
         TenantContext::clear();
+        $this->jwtService = $this->app->make(JwtService::class);
     }
 
     /**
@@ -84,20 +87,27 @@ class TenancyAndIdentityTest extends TestCase
         // Link User to Org A but not Org B
         $user->organizations()->attach($orgA->id);
 
+        // Generate JWT token for user
+        $token = $this->jwtService->encode([
+            'sub' => $user->id,
+            'type' => 'user'
+        ]);
+
         // 2. Request tenant endpoint without X-Organization-Id header
-        $response = $this->actingAs($user)->getJson('/api/v1/tenancy/tenant-only');
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/v1/tenancy/tenant-only');
         $response->assertStatus(200);
         $response->assertJson(['organization_id' => null]);
 
         // 3. Request with valid X-Organization-Id header for Org A
-        $response = $this->actingAs($user)
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
             ->withHeader('X-Organization-Id', (string) $orgA->id)
             ->getJson('/api/v1/tenancy/tenant-only');
         $response->assertStatus(200);
         $response->assertJson(['organization_id' => $orgA->id]);
 
         // 4. Request with unauthorized X-Organization-Id header for Org B
-        $response = $this->actingAs($user)
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
             ->withHeader('X-Organization-Id', (string) $orgB->id)
             ->getJson('/api/v1/tenancy/tenant-only');
         $response->assertStatus(403);

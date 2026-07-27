@@ -33,7 +33,7 @@ class EnrollmentServiceProvider extends ServiceProvider
 
         if (file_exists($routeFile)) {
             Route::middleware('api')
-                ->prefix('api/v1/' . strtolower('Enrollment'))
+                ->prefix('api/v1')
                 ->group($routeFile);
         }
     }

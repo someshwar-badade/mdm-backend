@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'tenant.resolve' => \Modules\Tenancy\Http\Middleware\ResolveTenant::class,
+            'auth.jwt' => \Modules\Identity\Http\Middleware\AuthenticateJwt::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
