@@ -33,7 +33,7 @@ class IdentityServiceProvider extends ServiceProvider
 
         if (file_exists($routeFile)) {
             Route::middleware('api')
-                ->prefix('api/v1/' . strtolower('Identity'))
+                ->prefix('api/v1')
                 ->group($routeFile);
         }
     }

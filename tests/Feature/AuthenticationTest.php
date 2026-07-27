@@ -33,14 +33,14 @@ class AuthenticationTest extends TestCase
         ]);
 
         // Login with invalid credentials
-        $response = $this->postJson('/api/v1/identity/auth/login', [
+        $response = $this->postJson('/api/v1/auth/login', [
             'email' => 'admin@mdm.com',
             'password' => 'wrongpass'
         ]);
         $response->assertStatus(401);
 
         // Login with valid credentials
-        $response = $this->postJson('/api/v1/identity/auth/login', [
+        $response = $this->postJson('/api/v1/auth/login', [
             'email' => 'admin@mdm.com',
             'password' => 'secret123'
         ]);
@@ -55,7 +55,7 @@ class AuthenticationTest extends TestCase
 
         // Test GET /me with access token
         $meResponse = $this->withHeader('Authorization', "Bearer {$accessToken}")
-            ->getJson('/api/v1/identity/auth/me');
+            ->getJson('/api/v1/auth/me');
         $meResponse->assertStatus(200)
             ->assertJson([
                 'email' => 'admin@mdm.com'
@@ -74,14 +74,14 @@ class AuthenticationTest extends TestCase
         ]);
 
         // 1. Initial login to get refresh token
-        $loginRes = $this->postJson('/api/v1/identity/auth/login', [
+        $loginRes = $this->postJson('/api/v1/auth/login', [
             'email' => 'admin@mdm.com',
             'password' => 'secret123'
         ]);
         $refreshToken1 = $loginRes->json('refresh_token');
 
         // 2. Refresh tokens using refresh token
-        $refreshRes = $this->postJson('/api/v1/identity/auth/refresh', [
+        $refreshRes = $this->postJson('/api/v1/auth/refresh', [
             'refresh_token' => $refreshToken1
         ]);
         $refreshRes->assertStatus(200)
@@ -93,7 +93,7 @@ class AuthenticationTest extends TestCase
         $this->assertTrue(RefreshToken::where('token', $refreshToken1)->first()->is_revoked);
 
         // 3. Attempt to REUSE the old refresh token (simulate theft)
-        $reuseRes = $this->postJson('/api/v1/identity/auth/refresh', [
+        $reuseRes = $this->postJson('/api/v1/auth/refresh', [
             'refresh_token' => $refreshToken1
         ]);
         $reuseRes->assertStatus(401)
@@ -116,14 +116,14 @@ class AuthenticationTest extends TestCase
             'password' => 'secret123'
         ]);
 
-        $loginRes = $this->postJson('/api/v1/identity/auth/login', [
+        $loginRes = $this->postJson('/api/v1/auth/login', [
             'email' => 'admin@mdm.com',
             'password' => 'secret123'
         ]);
         $refreshToken = $loginRes->json('refresh_token');
 
         // Logout
-        $logoutRes = $this->postJson('/api/v1/identity/auth/logout', [
+        $logoutRes = $this->postJson('/api/v1/auth/logout', [
             'refresh_token' => $refreshToken
         ]);
         $logoutRes->assertStatus(200);
@@ -132,7 +132,7 @@ class AuthenticationTest extends TestCase
         $this->assertTrue(RefreshToken::where('token', $refreshToken)->first()->is_revoked);
 
         // Try to refresh with revoked token -> should fail
-        $refreshRes = $this->postJson('/api/v1/identity/auth/refresh', [
+        $refreshRes = $this->postJson('/api/v1/auth/refresh', [
             'refresh_token' => $refreshToken
         ]);
         $refreshRes->assertStatus(401);
