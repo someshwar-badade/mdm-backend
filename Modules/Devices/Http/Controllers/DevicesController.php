@@ -49,7 +49,7 @@ class DevicesController extends Controller
     public function queueCommand(Request $request, int $id, FcmService $fcmService): JsonResponse
     {
         $data = $request->validate([
-            'command' => 'required|string|in:lock,reboot,launch_app,kiosk_mode',
+            'command' => 'required|string|in:lock,reboot,launch_app,kiosk_mode,disable_camera,uninstall_app,wipe',
             'payload' => 'nullable|string',
         ]);
 
@@ -120,10 +120,18 @@ class DevicesController extends Controller
             'agent' => 'required|array',
             'agent.version' => 'required|string',
             'agent.policyVersion' => 'required|integer',
+            'location' => 'nullable|array',
+            'location.latitude' => 'nullable|numeric',
+            'location.longitude' => 'nullable|numeric',
         ]);
 
-        // Update heartbeat timestamp
-        $device->update(['last_heartbeat_at' => now()]);
+        // Update heartbeat timestamp and coordinates
+        $updateData = ['last_heartbeat_at' => now()];
+        if (isset($data['location'])) {
+            $updateData['latitude'] = $data['location']['latitude'] ?? null;
+            $updateData['longitude'] = $data['location']['longitude'] ?? null;
+        }
+        $device->update($updateData);
 
         // Log heartbeat specs
         $device->events()->create([

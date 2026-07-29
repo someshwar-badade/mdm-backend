@@ -18,7 +18,9 @@ class Device extends Model
         'status',
         'device_secret',
         'last_heartbeat_at',
-        'fcm_token'
+        'fcm_token',
+        'latitude',
+        'longitude'
     ];
 
     protected $hidden = ['device_secret'];
