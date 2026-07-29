@@ -55,7 +55,7 @@ class DeviceCommandsTest extends TestCase
         ];
 
         $heartbeatRes = $this->withHeader('Authorization', "Bearer {$deviceToken}")
-            ->postJson("/api/v1/devices/{$device->id}/heartbeat", $heartbeatPayload);
+            ->postJson("/api/v1/device/heartbeat", $heartbeatPayload);
 
         $heartbeatRes->assertStatus(200)
             ->assertJson(['message' => 'Heartbeat acknowledged.']);
@@ -74,7 +74,7 @@ class DeviceCommandsTest extends TestCase
         ];
 
         $inventoryRes = $this->withHeader('Authorization', "Bearer {$deviceToken}")
-            ->putJson("/api/v1/devices/{$device->id}/inventory", $inventoryPayload);
+            ->putJson("/api/v1/device/inventory", $inventoryPayload);
 
         $inventoryRes->assertStatus(200)
             ->assertJson(['message' => 'Device inventory updated successfully.']);
@@ -177,4 +177,39 @@ class DeviceCommandsTest extends TestCase
         $this->assertNotNull($completedCommand->completed_at);
         $this->assertEquals(['details' => 'Device locked successfully.'], $completedCommand->result);
     }
+
+    /**
+     * Test device registering and updating its FCM token.
+     */
+    public function test_device_fcm_token_registration(): void
+    {
+        $org = Organization::create(['name' => 'Brick Org']);
+        
+        $device = Device::create([
+            'organization_id' => $org->id,
+            'device_uid' => 'dev_fcm_123',
+            'name' => 'FCM Pixel',
+            'status' => 'active',
+            'device_secret' => bcrypt('secret123')
+        ]);
+
+        $deviceToken = $this->jwtService->encode([
+            'sub' => $device->device_uid,
+            'type' => 'device',
+            'org' => $org->id
+        ]);
+
+        $fcmPayload = [
+            'fcm_token' => 'mock_fcm_token_string_abc_123'
+        ];
+
+        $response = $this->withHeader('Authorization', "Bearer {$deviceToken}")
+            ->postJson("/api/v1/device/fcm-token", $fcmPayload);
+
+        $response->assertStatus(200)
+            ->assertJson(['message' => 'FCM Token updated successfully.']);
+
+        $this->assertEquals('mock_fcm_token_string_abc_123', $device->fresh()->fcm_token);
+    }
 }
+

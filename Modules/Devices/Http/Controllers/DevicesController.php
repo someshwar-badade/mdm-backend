@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Modules\Devices\Domain\Entities\Device;
 use Modules\Devices\Domain\Entities\DeviceIdentity;
 use Modules\Commands\Domain\Entities\Command;
+use Modules\Notifications\Infrastructure\Integrations\FcmService;
 
 class DevicesController extends Controller
 {
@@ -45,7 +46,7 @@ class DevicesController extends Controller
     /**
      * Admin Endpoint: Queue a remote command for the device.
      */
-    public function queueCommand(Request $request, int $id): JsonResponse
+    public function queueCommand(Request $request, int $id, FcmService $fcmService): JsonResponse
     {
         $data = $request->validate([
             'command' => 'required|string|in:lock,reboot,launch_app,kiosk_mode',
@@ -74,6 +75,11 @@ class DevicesController extends Controller
             ]
         ]);
 
+        // Trigger real-time FCM notification if device has registered a token
+        if (!empty($device->fcm_token)) {
+            $fcmService->sendCommandNotification($device->fcm_token, $command->toArray());
+        }
+
         return response()->json([
             'message' => 'Command ' . $data['command'] . ' queued successfully.',
             'command_id' => $command->id
@@ -93,11 +99,11 @@ class DevicesController extends Controller
     /**
      * Device Endpoint: Process incoming device heartbeat.
      */
-    public function heartbeat(Request $request, int $id): JsonResponse
+    public function heartbeat(Request $request): JsonResponse
     {
         $device = $request->attributes->get('device');
 
-        if (!$device || $device->id !== $id) {
+        if (!$device) {
             return response()->json(['message' => 'Forbidden device context.'], 403);
         }
 
@@ -132,11 +138,11 @@ class DevicesController extends Controller
     /**
      * Device Endpoint: Update device physical hardware profile/inventory details.
      */
-    public function updateInventory(Request $request, int $id): JsonResponse
+    public function updateInventory(Request $request): JsonResponse
     {
         $device = $request->attributes->get('device');
 
-        if (!$device || $device->id !== $id) {
+        if (!$device) {
             return response()->json(['message' => 'Forbidden device context.'], 403);
         }
 
@@ -222,5 +228,25 @@ class DevicesController extends Controller
         ]);
 
         return response()->json(['message' => 'Command outcome reported successfully.']);
+    }
+
+    /**
+     * Device Endpoint: Register/update Firebase Cloud Messaging token.
+     */
+    public function updateFcmToken(Request $request): JsonResponse
+    {
+        $device = $request->attributes->get('device');
+
+        if (!$device) {
+            return response()->json(['message' => 'Forbidden device context.'], 403);
+        }
+
+        $data = $request->validate([
+            'fcm_token' => 'required|string|max:1000'
+        ]);
+
+        $device->update(['fcm_token' => $data['fcm_token']]);
+
+        return response()->json(['message' => 'FCM Token updated successfully.']);
     }
 }

@@ -109,9 +109,7 @@ class PoliciesController extends Controller
         }
 
         if (!$assignment) {
-            return response()->json([
-                'message' => 'No policy assigned to this device.'
-            ], 404);
+            return response()->json(null);
         }
 
         return response()->json($assignment->policy);
