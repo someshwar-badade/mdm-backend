@@ -69,4 +69,20 @@ class Device extends Model
     {
         return $this->hasMany(\Modules\Commands\Domain\Entities\Command::class, 'device_id');
     }
+
+    /**
+     * Get the policy assignment for the device.
+     */
+    public function policyAssignment()
+    {
+        return $this->hasOne(\Modules\Policies\Domain\Entities\PolicyAssignment::class, 'device_id');
+    }
+
+    /**
+     * Get the compliance statuses for the device.
+     */
+    public function policyStatuses()
+    {
+        return $this->hasMany(\Modules\Policies\Domain\Entities\DevicePolicyStatus::class, 'device_id');
+    }
 }

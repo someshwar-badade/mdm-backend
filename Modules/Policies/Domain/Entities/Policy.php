@@ -21,4 +21,20 @@ class Policy extends Model
         'settings' => 'array',
         'version' => 'integer'
     ];
+
+    /**
+     * Get assignments associated with this policy.
+     */
+    public function assignments()
+    {
+        return $this->hasMany(PolicyAssignment::class, 'policy_id');
+    }
+
+    /**
+     * Get device compliance statuses associated with this policy.
+     */
+    public function deviceStatuses()
+    {
+        return $this->hasMany(DevicePolicyStatus::class, 'policy_id');
+    }
 }

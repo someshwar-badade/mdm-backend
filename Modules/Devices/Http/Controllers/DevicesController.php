@@ -33,14 +33,35 @@ class DevicesController extends Controller
         return response()->json($devices);
     }
 
-    /**
-     * Fetch complete device details.
-     */
     public function show(int $id): JsonResponse
     {
         $device = Device::with(['identity', 'statusHistory', 'events'])
             ->findOrFail($id);
-        return response()->json($device);
+
+        // Find assigned policy (direct or profile fallback)
+        $assignment = \Modules\Policies\Domain\Entities\PolicyAssignment::with('policy')
+            ->where('device_id', $device->id)
+            ->first();
+
+        if (!$assignment && $device->enrollment_profile_id) {
+            $assignment = \Modules\Policies\Domain\Entities\PolicyAssignment::with('policy')
+                ->where('enrollment_profile_id', $device->enrollment_profile_id)
+                ->first();
+        }
+
+        $policyStatus = null;
+        if ($assignment) {
+            $policyStatus = \Modules\Policies\Domain\Entities\DevicePolicyStatus::where('device_id', $device->id)
+                ->where('policy_id', $assignment->policy_id)
+                ->first();
+        }
+
+        // Append to device array representation
+        $deviceData = $device->toArray();
+        $deviceData['assigned_policy'] = $assignment ? $assignment->policy : null;
+        $deviceData['policy_status'] = $policyStatus;
+
+        return response()->json($deviceData);
     }
 
     /**
@@ -49,7 +70,7 @@ class DevicesController extends Controller
     public function queueCommand(Request $request, int $id, FcmService $fcmService): JsonResponse
     {
         $data = $request->validate([
-            'command' => 'required|string|in:lock,reboot,launch_app,kiosk_mode,disable_camera,uninstall_app,wipe',
+            'command' => 'required|string|in:lock,reboot,launch_app,kiosk_mode,disable_camera,uninstall_app,wipe,policy_sync',
             'payload' => 'nullable|string',
         ]);
 

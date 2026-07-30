@@ -9,6 +9,8 @@ Route::get('/policies/health', [PoliciesController::class, 'health']);
 Route::middleware(['auth.jwt', 'tenant.resolve'])->group(function () {
     Route::post('/policies', [PoliciesController::class, 'store']);
     Route::get('/policies', [PoliciesController::class, 'index']);
+    Route::put('/policies/{id}', [PoliciesController::class, 'update']);
+    Route::delete('/policies/{id}', [PoliciesController::class, 'destroy']);
     Route::post('/policies/{id}/assign', [PoliciesController::class, 'assign']);
 });
 

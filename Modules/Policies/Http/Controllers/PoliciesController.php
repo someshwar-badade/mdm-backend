@@ -8,6 +8,8 @@ use Illuminate\Http\JsonResponse;
 use Modules\Policies\Domain\Entities\Policy;
 use Modules\Policies\Domain\Entities\PolicyAssignment;
 use Modules\Policies\Domain\Entities\DevicePolicyStatus;
+use Modules\Notifications\Infrastructure\Integrations\FcmService;
+use Modules\Devices\Domain\Entities\Device;
 
 class PoliciesController extends Controller
 {
@@ -45,19 +47,52 @@ class PoliciesController extends Controller
         return response()->json($policy, 201);
     }
 
-    /**
-     * Admin Endpoint: List all policies.
-     */
     public function index(): JsonResponse
     {
-        $policies = Policy::all();
+        $policies = Policy::with(['assignments', 'deviceStatuses'])->get();
         return response()->json($policies);
+    }
+
+    /**
+     * Admin Endpoint: Update a policy configuration.
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $policy = Policy::findOrFail($id);
+
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'settings' => 'required|array',
+        ]);
+
+        $policy->update([
+            'name' => $data['name'],
+            'description' => $data['description'] ?? null,
+            'settings' => $data['settings'],
+            'version' => $policy->version + 1
+        ]);
+
+        return response()->json($policy);
+    }
+
+    /**
+     * Admin Endpoint: Delete a policy.
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $policy = Policy::findOrFail($id);
+        $policy->delete();
+
+        return response()->json([
+            'message' => 'Policy deleted successfully.'
+        ]);
     }
 
     /**
      * Admin Endpoint: Assign a policy to a device or enrollment profile.
      */
-    public function assign(Request $request, int $id): JsonResponse
+    public function assign(Request $request, int $id, FcmService $fcmService): JsonResponse
     {
         $data = $request->validate([
             'device_id' => 'nullable|integer|exists:devices,id',
@@ -82,6 +117,29 @@ class PoliciesController extends Controller
                 'policy_id' => $policy->id
             ]
         );
+
+        // Send FCM notification to target device(s)
+        if (!empty($data['device_id'])) {
+            $device = Device::find($data['device_id']);
+            if ($device && !empty($device->fcm_token)) {
+                $fcmService->sendCommandNotification($device->fcm_token, [
+                    'command' => 'policy_sync',
+                    'command_id' => 'policy_' . $policy->id,
+                    'payload' => ''
+                ]);
+            }
+        } elseif (!empty($data['enrollment_profile_id'])) {
+            $devices = Device::where('enrollment_profile_id', $data['enrollment_profile_id'])->get();
+            foreach ($devices as $device) {
+                if (!empty($device->fcm_token)) {
+                    $fcmService->sendCommandNotification($device->fcm_token, [
+                        'command' => 'policy_sync',
+                        'command_id' => 'policy_' . $policy->id,
+                        'payload' => ''
+                    ]);
+                }
+            }
+        }
 
         return response()->json([
             'message' => 'Policy assigned successfully.',
