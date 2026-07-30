@@ -124,7 +124,7 @@ class PoliciesController extends Controller
             if ($device && !empty($device->fcm_token)) {
                 $fcmService->sendCommandNotification($device->fcm_token, [
                     'command' => 'policy_sync',
-                    'command_id' => 'policy_' . $policy->id,
+                    'id' => 'policy_' . $policy->id,
                     'payload' => ''
                 ]);
             }
@@ -134,7 +134,7 @@ class PoliciesController extends Controller
                 if (!empty($device->fcm_token)) {
                     $fcmService->sendCommandNotification($device->fcm_token, [
                         'command' => 'policy_sync',
-                        'command_id' => 'policy_' . $policy->id,
+                        'id' => 'policy_' . $policy->id,
                         'payload' => ''
                     ]);
                 }

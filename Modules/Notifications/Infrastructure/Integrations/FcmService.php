@@ -45,7 +45,7 @@ class FcmService
                 'token' => $fcmToken,
                 'data' => [
                     'command' => $commandData['command'],
-                    'command_id' => (string) $commandData['id'],
+                    'command_id' => (string) ($commandData['id'] ?? $commandData['command_id'] ?? '0'),
                     'payload' => $commandData['payload'] ?? ''
                 ]
             ]
