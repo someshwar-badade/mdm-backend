@@ -70,7 +70,7 @@ class DevicesController extends Controller
     public function queueCommand(Request $request, int $id, FcmService $fcmService): JsonResponse
     {
         $data = $request->validate([
-            'command' => 'required|string|in:lock,reboot,launch_app,kiosk_mode,disable_camera,uninstall_app,wipe,policy_sync',
+            'command' => 'required|string|in:lock,reboot,launch_app,kiosk_mode,disable_camera,uninstall_app,wipe,policy_sync,start_screen_share,stop_screen_share,disable_app,enable_app,hide_app,unhide_app,restrict_app,unrestrict_app',
             'payload' => 'nullable|string',
         ]);
 
@@ -83,6 +83,10 @@ class DevicesController extends Controller
             'payload' => $data['payload'] ?? null,
             'status' => 'pending'
         ]);
+
+        if ($data['command'] === 'stop_screen_share') {
+            \Illuminate\Support\Facades\Cache::forget("device_screen_{$device->id}");
+        }
 
         // Audit command triggers
         $device->events()->create([
@@ -183,6 +187,7 @@ class DevicesController extends Controller
             'hardware_model' => 'nullable|string|max:255',
             'os_version' => 'nullable|string|max:255',
             'sdk_version' => 'nullable|integer',
+            'installed_apps' => 'nullable|array',
         ]);
 
         // Find or create device identity
@@ -277,5 +282,38 @@ class DevicesController extends Controller
         $device->update(['fcm_token' => $data['fcm_token']]);
 
         return response()->json(['message' => 'FCM Token updated successfully.']);
+    }
+
+    /**
+     * Device Endpoint: Upload real-time screen capture frame.
+     */
+    public function uploadScreenFrame(Request $request): JsonResponse
+    {
+        $device = $request->attributes->get('device');
+        if (!$device) {
+            return response()->json(['message' => 'Forbidden device context.'], 403);
+        }
+
+        $data = $request->validate([
+            'image' => 'required|string',
+        ]);
+
+        \Illuminate\Support\Facades\Cache::put("device_screen_{$device->id}", $data['image'], 300);
+
+        return response()->json(['message' => 'Screen frame uploaded.']);
+    }
+
+    /**
+     * Admin Endpoint: Get the latest screen capture frame.
+     */
+    public function getScreenFrame(int $id): JsonResponse
+    {
+        $device = Device::findOrFail($id);
+        $image = \Illuminate\Support\Facades\Cache::get("device_screen_{$device->id}");
+
+        return response()->json([
+            'device_id' => $device->id,
+            'image' => $image,
+        ]);
     }
 }

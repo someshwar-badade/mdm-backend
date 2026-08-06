@@ -16,7 +16,12 @@ class DeviceIdentity extends Model
         'hardware_manufacturer',
         'hardware_model',
         'os_version',
-        'sdk_version'
+        'sdk_version',
+        'installed_apps'
+    ];
+
+    protected $casts = [
+        'installed_apps' => 'array'
     ];
 
     /**
